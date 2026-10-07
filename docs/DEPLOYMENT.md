@@ -66,8 +66,7 @@ sebagai rahasia.
 ## 2. Smart contract — sudah live, TIDAK perlu deploy
 
 Pool, Groth16 Verifier, ASP Membership/Non-membership, dan Token SAC **sudah ter-deploy di
-Stellar Testnet**. Alamatnya hardcoded di `frontend/src/lib/stellar/config.ts` (sama dengan
-tabel di `README.md`). Frontend tinggal menunjuk ke sana.
+Stellar Testnet**. Alamatnya didefinisikan di `frontend/src/lib/stellar/config.ts` sebagai *source of truth* (dicerminkan di tabel `README.md`). Frontend tinggal menunjuk ke sana.
 
 - ASP register bersifat permissionless di kontrak PoC; auto-register berjalan dari sisi
   client saat deposit pertama. Tidak ada yang perlu kamu setel.

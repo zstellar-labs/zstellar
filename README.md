@@ -327,14 +327,16 @@ RPC: `https://soroban-testnet.stellar.org` · Network passphrase: `Test SDF Netw
 
 ### Addresses (Stellar Testnet)
 
+> The single source of truth for deployed contract addresses is [`frontend/src/lib/stellar/config.ts`](frontend/src/lib/stellar/config.ts).
+
 | Contract | Address | Description |
 |---|---|---|
-| `Pool` | `CDQRALECG5P3RGPVZPNRCMUD4NYKDJDHZHZYXCVY3URFXDIZMAFVCS7U` | Single `transact` entrypoint; verifies the proof and applies `ext_data` |
-| `Groth16 Verifier` | `CDZCUT2SPJ6O7MMV7PAMWVEEURUIJL4VY7YK6VXMFRH3VJ7F2HEOYOZG` | On-chain Groth16 proof verification over BN254 |
-| `ASP Membership` | `CDD7LJJDO35WCKZK63Q5ADGT76K7DEEL6YHB4DELMLJ4CPTSCALFXE7Q` | Approved-deposit Merkle tree (`insert_leaf`) |
-| `ASP Non-Membership` | `CCZO4PIFRIZ7ZPXM6PLZYLP5POBDWRP245SVA54K542GHFBRI72FMVBB` | Exclusion-set companion contract |
+| `Pool` | `CCQVW6Z3H2G5T4SZXW6MYQQZWNLTRGJCCLHJLVXR6N7M2E3LPVY3CY2N` | Single `transact` entrypoint; verifies the proof and applies `ext_data` |
+| `Groth16 Verifier` | `CDMMDEFM6T44GYK2AFOQF6FMVJPAJYXUJJA3CIPNYRRJPN3M35662S53` | On-chain Groth16 proof verification over BN254 |
+| `ASP Membership` | `CBEVWMLPG5H36VW5OSDI7RATOHANKN2LBLNHHBTUP33ZHLIZRPAK2365` | Approved-deposit Merkle tree (`insert_leaf`) |
+| `ASP Non-Membership` | `CACMAMCL7JNTE5R64P67KXCFBH2QA73JI2UEIWHJUEO4NVBGBBK3G3TC` | Exclusion-set companion contract |
 | `Token (XLM SAC)` | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` | The shielded asset (native XLM via the Stellar Asset Contract) |
-| `Deployer` | `GCWXHHOBERTQBNCQDK7B4LNUZH72CF7BLWP6XUL4KSRYOOCOIISSFBBT` | Account that deployed the pool |
+| `Deployer` | `GBVYJ2OZFBHEV7TNFY45V4VLZVV747RCI42C7FHDZBW2MYU5KLYGYQQO` | Account that deployed the pool |
 
 ### Key functions
 
