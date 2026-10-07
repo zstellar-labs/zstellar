@@ -369,7 +369,8 @@ There is **no separate backend to deploy** — the relayer is a serverless Route
 3. Use a host that supports Next.js serverless / Node runtime (e.g. Vercel) — **not** static export.
 4. Keep the COOP/COEP headers from `next.config.ts` active (required for `SharedArrayBuffer` / OPFS).
 
-Full walkthrough and checklist: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+Full walkthrough and checklist: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.  
+Contract redeployment runbook: **[docs/REDEPLOY.md](docs/REDEPLOY.md)**.
 
 ---
 
