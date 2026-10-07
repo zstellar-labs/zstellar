@@ -175,14 +175,14 @@ if action == "withdraw":
 2. **Shield** a public asset into the pool (you sign; tokens are pulled in and a note commitment is created).
 3. **Receive** a shielded address from your Receive modal, or **Pay** a contact's shielded address with a Private Transfer.
 4. **Withdraw** any time to a public `G...` address; the relayer submits, so your address never appears.
-5. **Track** every action through the proof stepper and the View-transaction explorer link.
+5. **Track** every action through the transaction modal (`TxModal`) stepper (`Preparing keys & membership` → `Generating ZK proof` → `Sign in wallet` → `Submitting on-chain`) and the View-transaction explorer link.
 
-**Proof flow (browser)** — `Derive keys → Build circuit inputs → Prove (Groth16) → Prepare Soroban tx`
+**Proof flow (browser)** — `Preparing keys & membership → Generating ZK proof → Sign in wallet → Submitting on-chain`
 
-1. **Derive keys** from a single Freighter signature (cached locally in OPFS).
-2. **Build inputs** from your unspent notes, the target amount, and the recipient.
-3. **Prove** Groth16 over BN254 with Poseidon2, off the main thread in a Web Worker.
-4. **Prepare** the Soroban `transact` invocation with the proof and `ext_data` bound to the proof.
+1. **Preparing keys & membership** (`keys`, `register`, `sync`, `sync_wait`) — Derives private keys from a single Freighter signature (cached locally in OPFS), registers ASP membership if needed via `insert_leaf`, and syncs on-chain Merkle state.
+2. **Generating ZK proof** (`load_state`, `prove`, `compute`, `witness`) — Loads note state and generates the Groth16 zk-SNARK proof over the BN254 circuit client-side in a Web Worker.
+3. **Sign in wallet** (`sign_auth`, `sign_tx`) — Prompts for user authorization signatures via Freighter for Soroban auth entries and the transaction envelope (required for Shield; bypassed when submitting via relayer for private Transfer and Withdraw).
+4. **Submitting on-chain** (`submit`, `confirm`) — Broadcasts the verified transaction envelope to the Soroban network (via relayer or user wallet) and polls for on-chain confirmation.
 
 **On-chain flow**
 
@@ -305,7 +305,8 @@ Every private action is a proof produced in the browser and verified on-chain by
 | **ASP Register** | [`frontend/src/lib/stellar/register.ts`](./frontend/src/lib/stellar/register.ts) | Builds and submits `insert_leaf` to register the user in the ASP membership tree |
 | **Relayer Route** | [`frontend/src/app/api/relay/route.ts`](./frontend/src/app/api/relay/route.ts) | Server-side: signs the `sender` auth entry and the tx envelope with the relayer `Keypair`, submits to testnet |
 | **Relayer Setup** | [`frontend/scripts/setup-relayer.mjs`](./frontend/scripts/setup-relayer.mjs) | Generates and Friendbot-funds the relayer, writes `RELAYER_SECRET` and `NEXT_PUBLIC_RELAYER_ADDRESS` to `.env.local` |
-| **Action Panel** | [`frontend/src/components/pages/(main)/ActionPanel.tsx`](./frontend/src/components/pages/\(main\)/ActionPanel.tsx) | The main UI: Shield, Private Transfer, Private Withdraw, with the proof stepper and the always-on relay badge |
+| **Action Panel** | [`frontend/src/components/pages/(main)/ActionPanel.tsx`](./frontend/src/components/pages/\(main\)/ActionPanel.tsx) | The main UI: Shield, Private Transfer, Private Withdraw, triggering `TxModal` with the always-on relay badge |
+| **Transaction Modal** | [`frontend/src/components/pages/(main)/TxModal.tsx`](./frontend/src/components/pages/\(main\)/TxModal.tsx) | Multi-stage transaction modal presenting the 4-step stepper (`Preparing keys & membership`, `Generating ZK proof`, `Sign in wallet`, `Submitting on-chain`) |
 | **Wallet Feature** | [`frontend/src/features/wallet/`](./frontend/src/features/wallet/) | Freighter connect, disconnect, faucet, and the shielded-address Receive modal |
 
 ### Stellar endpoints in use
