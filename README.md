@@ -327,6 +327,8 @@ RPC: `https://soroban-testnet.stellar.org` · Network passphrase: `Test SDF Netw
 
 ### Addresses (Stellar Testnet)
 
+> For contract redeployment history, address updates, and OPFS storage migration details, see [CHANGELOG.md](./CHANGELOG.md).
+
 | Contract | Address | Description |
 |---|---|---|
 | `Pool` | `CDQRALECG5P3RGPVZPNRCMUD4NYKDJDHZHZYXCVY3URFXDIZMAFVCS7U` | Single `transact` entrypoint; verifies the proof and applies `ext_data` |
