@@ -440,6 +440,8 @@ node scripts/patch-wasm-ledger.mjs
 ```
 
 The browser's WASM bundle and the `/api/rpc` proxy must agree on where the current deployment starts: a contract redeploy must also set `NEW_DEPLOYMENT_LEDGER` in `frontend/src/app/api/rpc/route.ts` to the ledger patched into the WASM. The ordered procedure for all five update sites is in **[docs/REDEPLOY.md](docs/REDEPLOY.md)**.
+Full walkthrough and checklist: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.  
+Contract redeployment runbook: **[docs/REDEPLOY.md](docs/REDEPLOY.md)**.
 
 ---
 
