@@ -367,6 +367,7 @@ The browser never calls that host directly: `browserRpcUrl()` in `frontend/src/l
 ### Addresses (Stellar Testnet)
 
 > The single source of truth for deployed contract addresses is [`frontend/src/lib/stellar/config.ts`](frontend/src/lib/stellar/config.ts).
+> For contract redeployment history, address updates, and OPFS storage migration details, see [CHANGELOG.md](./CHANGELOG.md).
 
 | Contract | Address | Description |
 |---|---|---|
