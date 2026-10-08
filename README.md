@@ -206,6 +206,14 @@ if action == "withdraw":
 2. **Generating ZK proof** (`load_state`, `prove`, `compute`, `witness`) — build the Groth16 proof over BN254 with Poseidon2, off the main thread in a Web Worker.
 3. **Sign in wallet** (`sign_auth`, `sign_tx`) — approve the authorization entry and the transaction in Freighter; skipped when the relayer submits.
 4. **Submitting on-chain** (`submit`, `confirm`) — broadcast the signed envelope and poll Soroban RPC for confirmation.
+5. **Track** every action through the transaction modal (`TxModal`) stepper (`Preparing keys & membership` → `Generating ZK proof` → `Sign in wallet` → `Submitting on-chain`) and the View-transaction explorer link.
+
+**Proof flow (browser)** — `Preparing keys & membership → Generating ZK proof → Sign in wallet → Submitting on-chain`
+
+1. **Preparing keys & membership** (`keys`, `register`, `sync`, `sync_wait`) — Derives private keys from a single Freighter signature (cached locally in OPFS), registers ASP membership if needed via `insert_leaf`, and syncs on-chain Merkle state.
+2. **Generating ZK proof** (`load_state`, `prove`, `compute`, `witness`) — Loads note state and generates the Groth16 zk-SNARK proof over the BN254 circuit client-side in a Web Worker.
+3. **Sign in wallet** (`sign_auth`, `sign_tx`) — Prompts for user authorization signatures via Freighter for Soroban auth entries and the transaction envelope (required for Shield; bypassed when submitting via relayer for private Transfer and Withdraw).
+4. **Submitting on-chain** (`submit`, `confirm`) — Broadcasts the verified transaction envelope to the Soroban network (via relayer or user wallet) and polls for on-chain confirmation.
 
 **On-chain flow**
 
@@ -342,6 +350,8 @@ Every private action is a proof produced in the browser and verified on-chain by
 | **Relayer Setup** | [`frontend/scripts/setup-relayer.mjs`](./frontend/scripts/setup-relayer.mjs) | Generates and Friendbot-funds the relayer, writes `RELAYER_SECRET` and `NEXT_PUBLIC_RELAYER_ADDRESS` to `.env.local` |
 | **RPC Proxy** | [`frontend/src/app/api/rpc/route.ts`](./frontend/src/app/api/rpc/route.ts) | Edge route the browser reaches via `browserRpcUrl()` (`/api/rpc`): rewrites `startLedger` to the deployment ledger so the hardcoded value in the WASM prover can't fall outside a pruned range, and returns an empty events page instead of an error when it would |
 | **Action Panel** | [`frontend/src/components/pages/(main)/ActionPanel.tsx`](./frontend/src/components/pages/\(main\)/ActionPanel.tsx) | The main UI: Shield, Private Transfer, Private Withdraw, with the proof stepper and the always-on relay badge |
+| **Action Panel** | [`frontend/src/components/pages/(main)/ActionPanel.tsx`](./frontend/src/components/pages/\(main\)/ActionPanel.tsx) | The main UI: Shield, Private Transfer, Private Withdraw, triggering `TxModal` with the always-on relay badge |
+| **Transaction Modal** | [`frontend/src/components/pages/(main)/TxModal.tsx`](./frontend/src/components/pages/\(main\)/TxModal.tsx) | Multi-stage transaction modal presenting the 4-step stepper (`Preparing keys & membership`, `Generating ZK proof`, `Sign in wallet`, `Submitting on-chain`) |
 | **Wallet Feature** | [`frontend/src/features/wallet/`](./frontend/src/features/wallet/) | Freighter connect, disconnect, faucet, and the shielded-address Receive modal |
 
 ### Stellar endpoints in use
