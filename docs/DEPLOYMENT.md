@@ -118,3 +118,14 @@ dan Web Worker) berfungsi.
 > Testnet only, unaudited, **jangan dipakai dengan dana asli**. Deploy ke mainnet berada di
 > luar cakupan tutorial ini dan butuh penanganan keamanan tambahan (pendanaan relayer dengan
 > XLM asli, manajemen kunci, dsb).
+
+
+## 5. Security & Verification
+
+To prevent silent asset mismatches, the frontend requires the pool's configured token to match `CONTRACTS.token`. If you redeploy the pool with a new SAC, you must update `config.ts`. You can verify this configuration matches the live on-chain deployment by running:
+
+`ash
+cd frontend
+pnpm test
+``n
+If there is a mismatch, the test will fail loudly to prevent users from bridging into the wrong asset.
