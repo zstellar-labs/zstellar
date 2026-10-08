@@ -34,6 +34,19 @@ function formatXlm(raw: string): string {
     : "0";
 }
 
+function trimBalance(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "0";
+  if (!trimmed.includes(".")) {
+    const int = trimmed.replace(/^0+(?=\d)/, "");
+    return int || "0";
+  }
+  const [whole, frac] = trimmed.split(".");
+  const cleanWhole = whole.replace(/^0+(?=\d)/, "") || "0";
+  const cleanFrac = frac.slice(0, 7).replace(/0+$/, "");
+  return cleanFrac ? `${cleanWhole}.${cleanFrac}` : cleanWhole;
+}
+
 const TOKENS = [
   {
     symbol: "XLM",
@@ -238,7 +251,7 @@ export function ActionPanel() {
             <span className="px-1">·</span>
             <button
               type="button"
-              onClick={() => setAmount(String(Number(balance) || 0))}
+              onClick={() => setAmount(trimBalance(balance))}
               className="cursor-pointer font-medium text-fg"
             >
               Max
