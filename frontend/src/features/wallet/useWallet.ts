@@ -54,6 +54,13 @@ export function useWallet() {
       if (addr.error || !addr.address) return;
       const net = await getNetwork();
       if (net.error) return;
+      if (net.network !== "TESTNET") {
+        setState((s) => ({
+          ...s,
+          error: "Switch Freighter to the Testnet network.",
+        }));
+        return;
+      }
       await load(addr.address, net.network);
     })();
   }, [load]);
