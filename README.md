@@ -175,14 +175,13 @@ if action == "withdraw":
 2. **Shield** a public asset into the pool (you sign; tokens are pulled in and a note commitment is created).
 3. **Receive** a shielded address from your Receive modal, or **Pay** a contact's shielded address with a Private Transfer.
 4. **Withdraw** any time to a public `G...` address; the relayer submits, so your address never appears.
-5. **Track** every action through the proof stepper and the View-transaction explorer link.
 
-**Proof flow (browser)** — `Derive keys → Build circuit inputs → Prove (Groth16) → Prepare Soroban tx`
+**Proof flow (browser)** — `Preparing keys & membership → Generating ZK proof → Sign in wallet → Submitting on-chain`
 
-1. **Derive keys** from a single Freighter signature (cached locally in OPFS).
-2. **Build inputs** from your unspent notes, the target amount, and the recipient.
-3. **Prove** Groth16 over BN254 with Poseidon2, off the main thread in a Web Worker.
-4. **Prepare** the Soroban `transact` invocation with the proof and `ext_data` bound to the proof.
+1. **Preparing keys & membership** (`keys`, `register`, `sync`, `sync_wait`): Deriving private keys and verifying ASP membership list.
+2. **Generating ZK proof** (`load_state`, `prove`, `compute`, `witness`): Building Groth16 zk-SNARK proof over BN254 circuit client-side.
+3. **Sign in wallet** (`sign_auth`, `sign_tx`): Approve transaction authorization signature via Freighter.
+4. **Submitting on-chain** (`submit`, `confirm`): Broadcasting verified transaction envelope to Soroban network.
 
 **On-chain flow**
 
@@ -393,3 +392,4 @@ zStellar builds on Nethermind's Stellar Private Payments PoC and its circuits, w
 ---
 
 <p align="center"><i>Your balance and your counterparties stay private. zStellar.</i></p>
+
