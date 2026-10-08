@@ -305,6 +305,7 @@ Every private action is a proof produced in the browser and verified on-chain by
 | **ASP Register** | [`frontend/src/lib/stellar/register.ts`](./frontend/src/lib/stellar/register.ts) | Builds and submits `insert_leaf` to register the user in the ASP membership tree |
 | **Relayer Route** | [`frontend/src/app/api/relay/route.ts`](./frontend/src/app/api/relay/route.ts) | Server-side: signs the `sender` auth entry and the tx envelope with the relayer `Keypair`, submits to testnet |
 | **Relayer Setup** | [`frontend/scripts/setup-relayer.mjs`](./frontend/scripts/setup-relayer.mjs) | Generates and Friendbot-funds the relayer, writes `RELAYER_SECRET` and `NEXT_PUBLIC_RELAYER_ADDRESS` to `.env.local` |
+| **RPC Proxy** | [`frontend/src/app/api/rpc/route.ts`](./frontend/src/app/api/rpc/route.ts) | Edge route the browser reaches via `browserRpcUrl()` (`/api/rpc`): rewrites `startLedger` to the deployment ledger so the hardcoded value in the WASM prover can't fall outside a pruned range, and returns an empty events page instead of an error when it would |
 | **Action Panel** | [`frontend/src/components/pages/(main)/ActionPanel.tsx`](./frontend/src/components/pages/\(main\)/ActionPanel.tsx) | The main UI: Shield, Private Transfer, Private Withdraw, with the proof stepper and the always-on relay badge |
 | **Wallet Feature** | [`frontend/src/features/wallet/`](./frontend/src/features/wallet/) | Freighter connect, disconnect, faucet, and the shielded-address Receive modal |
 
