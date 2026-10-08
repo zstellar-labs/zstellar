@@ -1,116 +1,128 @@
-# Deployment — Relayer & Komponen Non-Web
+# Deployment — Relayer & Non-Web Components
 
-Tutorial ini fokus ke bagian **non-web**: relayer, smart contract, endpoint, dan env var.
-Untuk deploy aplikasi Next.js-nya sendiri, ikuti alur deploy Next biasa (Vercel direkomendasikan).
+This tutorial focuses on the **non-web** parts: the relayer, the smart
+contracts, the endpoints and the environment variables. To deploy the Next.js
+app itself, follow the normal Next deployment flow (Vercel recommended).
 
-> **Inti:** zStellar **tidak punya server/backend terpisah**. Relayer hanyalah serverless
-> Route Handler (`/api/relay`) yang ikut ter-deploy bersama web. Smart contract-nya juga
-> sudah live di Stellar Testnet. Jadi "deploy relayer" = siapkan keypair + env var + akun
-> yang terdanai.
+> **The short version:** zStellar has **no separate server/backend**. The
+> relayer is just a serverless Route Handler (`/api/relay`) that ships with the
+> web app, and the smart contracts are already live on Stellar Testnet. So
+> "deploying the relayer" means preparing a keypair, its env vars and a funded
+> account.
 
 ---
 
-## 1. Relayer (yang utama)
+## 1. Relayer (the main part)
 
-Relayer adalah akun Stellar khusus yang men-submit transaksi **Private Transfer** dan
-**Private Withdraw** atas nama user, supaya alamat pemilik note tidak pernah muncul on-chain.
-Secret-nya hanya dibaca server (`/api/relay`), tidak pernah dikirim ke browser.
+The relayer is a dedicated Stellar account that submits **Private Transfer**
+and **Private Withdraw** transactions on behalf of users, so the note owner's
+address never appears on-chain. Its secret is read by the server only
+(`/api/relay`) and is never sent to the browser.
 
-### 1a. Setup lokal
+### 1a. Local setup
 
 ```bash
 cd frontend
 node scripts/setup-relayer.mjs
 ```
 
-Skrip ini akan:
+The script will:
 
-- Generate (atau pakai ulang) keypair relayer.
-- Mendanai akun via Friendbot (testnet).
-- Menulis `RELAYER_SECRET` + `NEXT_PUBLIC_RELAYER_ADDRESS` ke `frontend/.env.local`.
+- Generate (or reuse) the relayer keypair.
+- Fund the account through Friendbot (testnet).
+- Write `RELAYER_SECRET` + `NEXT_PUBLIC_RELAYER_ADDRESS` to `frontend/.env.local`.
 
-Aman dijalankan berulang — kalau relayer sudah ada, akun-nya dipakai ulang & ditop-up.
-Restart `pnpm dev` setelahnya supaya env var baru terbaca.
+It is safe to run repeatedly — if the relayer already exists, its account is
+reused and topped up. Restart `pnpm dev` afterwards so the new env vars load.
 
-### 1b. Setup produksi
+### 1b. Production setup
 
-Jangan pernah commit `.env.local`. Di dashboard hosting (mis. Vercel → Project →
-Settings → Environment Variables) set dua variabel ini:
+Never commit `.env.local`. In the hosting dashboard (for example Vercel →
+Project → Settings → Environment Variables) set these two variables:
 
-| Variabel | Sifat | Keterangan |
+| Variable | Nature | Notes |
 |---|---|---|
-| `RELAYER_SECRET` | **rahasia**, server-only | Tanpa prefix `NEXT_PUBLIC_`. Hanya dibaca `/api/relay`. |
-| `NEXT_PUBLIC_RELAYER_ADDRESS` | publik | Alamat publik relayer, dipakai sebagai source tx Soroban. |
+| `RELAYER_SECRET` | **secret**, server-only | No `NEXT_PUBLIC_` prefix. Read only by `/api/relay`. |
+| `NEXT_PUBLIC_RELAYER_ADDRESS` | public | The relayer's public address, used as the Soroban tx source. |
 
-Cara dapat nilainya: jalankan `node scripts/setup-relayer.mjs` sekali di lokal, lalu salin
-dua baris dari `.env.local` ke env var hosting.
+To get the values: run `node scripts/setup-relayer.mjs` once locally, then copy
+the two lines from `.env.local` into the hosting env vars. The full variable
+list is in `frontend/.env.example`.
 
-### 1c. Jaga saldo relayer
+### 1c. Keep the relayer funded
 
-Relayer membayar fee setiap kali submit. Kalau XLM-nya habis, Private Transfer/Withdraw
-akan gagal.
+The relayer pays the fee on every submission. If it runs out of XLM, Private
+Transfer/Withdraw will fail.
 
-- **Testnet:** isi ulang via Friendbot, atau cukup jalankan ulang skrip (otomatis top-up):
+- **Testnet:** top it up with Friendbot, or just re-run the script (it tops up
+  automatically):
   ```
   https://friendbot.stellar.org/?addr=<NEXT_PUBLIC_RELAYER_ADDRESS>
   ```
-- `/api/relay` di-set `runtime = "nodejs"`, jadi butuh host yang mendukung Next serverless
-  (Vercel cocok). **Bukan** static hosting.
+- `/api/relay` sets `runtime = "nodejs"`, so it needs a host that supports Next
+  serverless (Vercel works). **Not** static hosting.
 
-⚠️ `RELAYER_SECRET` adalah kunci akun yang membayar fee. Jangan pernah commit ke git atau
-tempel di tempat publik. Di testnet risikonya hanya XLM testnet, tapi tetap perlakukan
-sebagai rahasia.
+⚠️ `RELAYER_SECRET` is the key of the account that pays the fees. Never commit
+it to git or paste it anywhere public. On testnet the only risk is testnet XLM,
+but treat it as a secret anyway.
 
 ---
 
-## 2. Smart contract — sudah live, TIDAK perlu deploy
+## 2. Smart contracts — already live, NO deploy needed
 
 Pool, Groth16 Verifier, ASP Membership/Non-membership, dan Token SAC **sudah ter-deploy di
 Stellar Testnet**. Alamatnya didefinisikan di `frontend/src/lib/stellar/config.ts` sebagai *source of truth* (dicerminkan di tabel `README.md`). Frontend tinggal menunjuk ke sana.
+The Pool, Groth16 Verifier, ASP Membership/Non-membership and the Token SAC are
+**already deployed on Stellar Testnet**. Their addresses are hardcoded in
+`frontend/src/lib/stellar/config.ts` (the same values as the table in
+`README.md`). The frontend just points at them.
 
-- ASP register bersifat permissionless di kontrak PoC; auto-register berjalan dari sisi
-  client saat deposit pertama. Tidak ada yang perlu kamu setel.
-- Kamu **hanya** perlu deploy kontrak kalau ingin fork PoC Nethermind dan punya pool sendiri.
-  Dalam kasus itu: deploy lewat Soroban CLI, lalu update alamat di `config.ts`. Untuk sekarang
-  langkah ini bisa dilewati.
+- ASP registration is permissionless in the PoC contract; auto-register runs
+  client-side on the first deposit. There is nothing to configure.
+- You **only** need to deploy contracts if you want to fork Nethermind's PoC and
+  run your own pool. In that case: deploy with the Soroban CLI, then update the
+  addresses in `config.ts`. For now this step can be skipped. If you do redeploy,
+  follow `docs/REDEPLOY.md` — five files must change together.
 
 ---
 
-## 3. Endpoint (opsional)
+## 3. Endpoints (optional)
 
-| Variabel | Default | Fungsi |
+| Variable | Default | Purpose |
 |---|---|---|
-| `STELLAR_RPC_UPSTREAM` | `https://soroban-testnet.stellar.org` | Upstream untuk proxy `/api/rpc` (server-side, retry). |
-| `NEXT_PUBLIC_STELLAR_RPC_URL` | testnet RPC | RPC yang dipakai browser. |
-| `NEXT_PUBLIC_STELLAR_HORIZON_URL` | testnet Horizon | Horizon untuk baca saldo / Friendbot. |
+| `STELLAR_RPC_UPSTREAM` | `https://soroban-testnet.stellar.org` | Upstream for the `/api/rpc` proxy (server-side, retries). |
+| `NEXT_PUBLIC_STELLAR_RPC_URL` | testnet RPC | The RPC the browser uses. |
+| `NEXT_PUBLIC_STELLAR_HORIZON_URL` | testnet Horizon | Horizon for reading balances / Friendbot. |
 
-Semua opsional — default-nya sudah menunjuk ke testnet.
-
----
-
-## 4. Wajib: COOP/COEP harus aktif di produksi
-
-`frontend/next.config.ts` menyetel header **COOP `same-origin`** + **COEP `require-corp`**
-secara global. Ini **wajib** agar `SharedArrayBuffer` dan OPFS (yang dibutuhkan WASM prover
-dan Web Worker) berfungsi.
-
-- Vercel menjalankan `headers()` otomatis — tidak perlu konfigurasi tambahan.
-- Karena COEP `require-corp`, semua resource lintas-origin harus CORP-compatible. Itulah
-  sebabnya video background dan aset engine di-serve same-origin dari `frontend/public/`
-  (bukan dari CDN eksternal).
-- Jangan pakai `next export` / static hosting: header tetap perlu diset manual, **dan**
-  Route Handler `/api/relay` serta `/api/rpc` tidak akan jalan (butuh runtime serverless).
+All optional — the defaults already point at testnet.
 
 ---
 
-## Checklist deploy
+## 4. Required: COOP/COEP must be active in production
 
-- [ ] `RELAYER_SECRET` di-set sebagai env var rahasia di hosting (tidak di-commit).
-- [ ] `NEXT_PUBLIC_RELAYER_ADDRESS` di-set di hosting.
-- [ ] Akun relayer terdanai XLM (testnet: Friendbot).
-- [ ] Host mendukung Next serverless / Node runtime (bukan static export).
-- [ ] Header COOP/COEP aktif (otomatis di Vercel via `next.config.ts`).
-- [ ] (Opsional) override RPC/Horizon jika tidak memakai endpoint testnet default.
+`frontend/next.config.ts` sets the **COOP `same-origin`** + **COEP
+`require-corp`** headers globally. This is **required** for
+`SharedArrayBuffer` and OPFS (used by the WASM prover and its Web Workers) to
+work.
+
+- Vercel runs `headers()` automatically — no extra configuration needed.
+- Because of COEP `require-corp`, every cross-origin resource must be
+  CORP-compatible. That is why the background videos and the engine assets are
+  served same-origin from `frontend/public/` (not from an external CDN).
+- Do not use `next export` / static hosting: the headers still have to be set
+  manually, **and** the `/api/relay` and `/api/rpc` Route Handlers will not run
+  (they need a serverless runtime).
+
+---
+
+## Deploy checklist
+
+- [ ] `RELAYER_SECRET` set as a secret env var on the host (not committed).
+- [ ] `NEXT_PUBLIC_RELAYER_ADDRESS` set on the host.
+- [ ] The relayer account is funded with XLM (testnet: Friendbot).
+- [ ] The host supports Next serverless / Node runtime (not static export).
+- [ ] COOP/COEP headers active (automatic on Vercel via `next.config.ts`).
+- [ ] (Optional) override RPC/Horizon if you are not using the default testnet endpoints.
 
 ---
 
@@ -128,3 +140,6 @@ cd frontend
 pnpm test
 ``n
 If there is a mismatch, the test will fail loudly to prevent users from bridging into the wrong asset.
+> Testnet only, unaudited, **do not use with real funds**. Deploying to mainnet
+> is outside the scope of this tutorial and needs extra security work (funding
+> the relayer with real XLM, key management, and so on).
