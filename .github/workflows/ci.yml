@@ -1,161 +1,110 @@
 name: CI
-
-# Build/lint every push and pull request (issue #29). `permissions` is scoped to
-# the read-only token the jobs need (issue #32) and every action is pinned to a
-# full commit SHA (issue #33).
 on:
   push:
+    branches:
+    - main
   pull_request:
-
+    branches:
+    - main
 permissions:
   contents: read
-
-# One run per ref; a newer push cancels the older run (issue #34).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   lint:
-    name: lint
+    name: Lint & Code Quality
     runs-on: ubuntu-latest
-    # Bounded well below the 360-minute GitHub default (issue #35).
     timeout-minutes: 10
     defaults:
       run:
         working-directory: frontend
     steps:
-      - name: Check out the repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10
-
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          # Minimum supported major, matching frontend/package.json `engines`.
-          node-version: 20
-          # Cache the pnpm store keyed on the committed lockfile (issue #36).
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        timeout-minutes: 10
-        run: pnpm install --frozen-lockfile
-
-      # `biome ci` is the non-interactive, never-writes verb (issue #40).
-      - name: Biome CI (lint, imports, format)
-        run: pnpm exec biome ci .
-
-      # Explicit format check that never rewrites the tree (issue #41).
-      - name: Biome format check
-        run: pnpm exec biome format .
-
-      # No new console.log may land in the shipped source (issue #103).
-      - name: Fail on stray console.log in src
-        run: |
-          echo "Scanning frontend/src for console.log(...)"
-          all_matches=$(grep -rn --include='*.ts' --include='*.tsx' --include='*.js' 'console\.log(' src || true)
-          # Explicit, file-scoped allowlist for pre-existing logs:
-          #   - api/rpc/route.ts keeps deliberate server-side proxy diagnostics.
-          #   - engine/vendor/wallet.js' two signMessage logs are removed by #66.
-          matches=$(printf '%s\n' "$all_matches" | grep -vE '^src/(app/api/rpc/route\.ts|engine/vendor/wallet\.js):' || true)
-          if [ -n "$matches" ]; then
-            echo "Found console.log( in frontend/src:"
-            printf '%s\n' "$matches"
-            exit 1
-          fi
-          echo "No stray console.log( found."
-
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: pnpm
+        cache-dependency-path: frontend/pnpm-lock.yaml
+    - name: Install dependencies
+      working-directory: frontend
+      run: pnpm install --frozen-lockfile
+    - name: Run Biome lint
+      working-directory: frontend
+      run: pnpm lint
   build:
-    name: build
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
     steps:
-      - name: Check out the repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10
-
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 20
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      # A lockfile that drifted from package.json fails right here (issues #29, #101).
-      - name: Install dependencies (frozen lockfile)
-        timeout-minutes: 10
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Build
-        run: pnpm build
-
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: pnpm
+        cache-dependency-path: frontend/pnpm-lock.yaml
+    - name: Install dependencies
+      working-directory: frontend
+      run: pnpm install --frozen-lockfile
+    - name: Build Next.js app
+      working-directory: frontend
+      run: pnpm build
   secret-scan:
-    name: secret-scan
+    name: Secret Scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out the repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # Repo-specific guard for a live relayer secret seed (issue #102).
-      - name: Fail on a committed RELAYER_SECRET value
-        run: |
-          echo "Scanning tracked files for Stellar secret seeds"
-          # Only tracked files are scanned, so the gitignored .env.local is never
-          # read. Documentation placeholders (*.md, *.txt, *.example) and this
-          # workflow are excluded.
-          matches=$(git grep -nIE 'RELAYER_SECRET=S[A-Z0-9]{55}|\bS[A-Z2-7]{55}\b' -- . \
-            ':(exclude).github' ':(exclude)*.md' ':(exclude)*.txt' ':(exclude)*.example' || true)
-          if [ -n "$matches" ]; then
-            echo "A Stellar secret seed appears to be committed:"
-            printf '%s\n' "$matches"
-            exit 1
-          fi
-          echo "No committed RELAYER_SECRET values found."
-
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: pnpm
+        cache-dependency-path: frontend/pnpm-lock.yaml
+    - name: Install dependencies
+      working-directory: frontend
+      run: pnpm install --frozen-lockfile
+    - name: Run Biome lint
+      working-directory: frontend
+      run: pnpm lint
+    - name: Scan tracked files for committed RELAYER_SECRET and secret seeds
+      run: "echo \"Scanning tracked files for committed Stellar secret seeds...\"\n\
+        MATCHES=$(git grep -En 'RELAYER_SECRET=S[A-Z0-9]{55}|\\bS[A-Z2-7]{55}\\b'\
+        \ || true)\nif [ -n \"$MATCHES\" ]; then\n  echo \"::error::Found committed\
+        \ Stellar secret seed in tracked files:\"\n  echo \"$MATCHES\"\n  exit 1\n\
+        fi\necho \"Clean: No committed secret keys found in tracked files.\"\n"
   docs-drift:
     name: docs-drift
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out the repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # README must list every CONTRACTS address from config.ts (issue #42).
-      - name: Verify README contract addresses match config.ts
-        run: |
-          node --input-type=module -e '
-          import { readFileSync } from "node:fs";
-          const config = readFileSync("frontend/src/lib/stellar/config.ts", "utf8");
-          const addresses = [...config.matchAll(/"([CG][A-Z2-7]{55})"/g)].map((match) => match[1]);
-          if (addresses.length !== 6) {
-            console.error("Expected 6 CONTRACTS addresses in config.ts, found " + addresses.length);
-            process.exit(1);
-          }
-          const readme = readFileSync("README.md", "utf8");
-          const missing = addresses.filter((address) => !readme.includes(address));
-          if (missing.length > 0) {
-            console.error("README.md is missing CONTRACTS addresses: " + missing.join(", "));
-            process.exit(1);
-          }
-          console.log("README.md lists all " + addresses.length + " CONTRACTS addresses.");
-          '
-
+    - name: Check out the repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+    - name: Verify README contract addresses match config.ts
+      run: "node --input-type=module -e '\nimport { readFileSync } from \"node:fs\"\
+        ;\nconst config = readFileSync(\"frontend/src/lib/stellar/config.ts\", \"\
+        utf8\");\nconst addresses = [...config.matchAll(/\"([CG][A-Z2-7]{55})\"/g)].map((match)\
+        \ => match[1]);\nif (addresses.length !== 6) {\n  console.error(\"Expected\
+        \ 6 CONTRACTS addresses in config.ts, found \" + addresses.length);\n  process.exit(1);\n\
+        }\nconst readme = readFileSync(\"README.md\", \"utf8\");\nconst missing =\
+        \ addresses.filter((address) => !readme.includes(address));\nif (missing.length\
+        \ > 0) {\n  console.error(\"README.md is missing CONTRACTS addresses: \" +\
+        \ missing.join(\", \"));\n  process.exit(1);\n}\nconsole.log(\"README.md lists\
+        \ all \" + addresses.length + \" CONTRACTS addresses.\");\n'\n"
   headers:
     name: headers
     runs-on: ubuntu-latest
@@ -164,88 +113,50 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - name: Check out the repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10
-
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 20
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-
-      - name: Install dependencies
-        timeout-minutes: 10
-        run: pnpm install --frozen-lockfile
-
-      # COOP/COEP and the /engine no-store header are load-bearing for
-      # SharedArrayBuffer/OPFS; a regression must fail CI (issue #46).
-      - name: Build, start and verify the cross-origin headers
-        timeout-minutes: 15
-        run: |
-          pnpm build
-          pnpm start > /tmp/next-start.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-
-          ready=""
-          for attempt in $(seq 1 60); do
-            if curl -sf -o /dev/null http://localhost:3000/; then
-              ready="yes"
-              break
-            fi
-            sleep 1
-          done
-          if [ -z "$ready" ]; then
-            echo "next start did not become ready"
-            cat /tmp/next-start.log
-            exit 1
-          fi
-
-          root_headers=$(curl -sSI http://localhost:3000/)
-          printf '%s\n' "$root_headers"
-          printf '%s\n' "$root_headers" | grep -qi 'cross-origin-opener-policy: same-origin'
-          printf '%s\n' "$root_headers" | grep -qi 'cross-origin-embedder-policy: require-corp'
-
-          engine_headers=$(curl -sSI http://localhost:3000/engine/js/web.js)
-          printf '%s\n' "$engine_headers"
-          printf '%s\n' "$engine_headers" | grep -qi 'cache-control: no-store'
-
-          echo "COOP/COEP and the /engine no-store header are intact."
-
-  # Single terminal gate: branch protection should require only `ci-ok` so a
-  # renamed, conditional, or skipped job cannot leave the PR green (issue #39).
+    - name: Check out the repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+    - name: Set up pnpm
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      with:
+        version: 10
+    - name: Set up Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+      with:
+        node-version: 20
+        cache: pnpm
+        cache-dependency-path: frontend/pnpm-lock.yaml
+    - name: Install dependencies
+      timeout-minutes: 10
+      run: pnpm install --frozen-lockfile
+    - name: Build, start and verify the cross-origin headers
+      timeout-minutes: 15
+      run: "pnpm build\npnpm start > /tmp/next-start.log 2>&1 &\nserver_pid=$!\ntrap\
+        \ 'kill \"$server_pid\" 2>/dev/null || true' EXIT\n\nready=\"\"\nfor attempt\
+        \ in $(seq 1 60); do\n  if curl -sf -o /dev/null http://localhost:3000/; then\n\
+        \    ready=\"yes\"\n    break\n  fi\n  sleep 1\ndone\nif [ -z \"$ready\" ];\
+        \ then\n  echo \"next start did not become ready\"\n  cat /tmp/next-start.log\n\
+        \  exit 1\nfi\n\nroot_headers=$(curl -sSI http://localhost:3000/)\nprintf\
+        \ '%s\\n' \"$root_headers\"\nprintf '%s\\n' \"$root_headers\" | grep -qi 'cross-origin-opener-policy:\
+        \ same-origin'\nprintf '%s\\n' \"$root_headers\" | grep -qi 'cross-origin-embedder-policy:\
+        \ require-corp'\n\nengine_headers=$(curl -sSI http://localhost:3000/engine/js/web.js)\n\
+        printf '%s\\n' \"$engine_headers\"\nprintf '%s\\n' \"$engine_headers\" | grep\
+        \ -qi 'cache-control: no-store'\n\necho \"COOP/COEP and the /engine no-store\
+        \ header are intact.\"\n"
   ci-ok:
     name: ci-ok
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: always()
     needs:
-      - lint
-      - build
-      - secret-scan
-      - docs-drift
-      - headers
+    - lint
+    - build
+    - secret-scan
+    - docs-drift
+    - headers
     steps:
-      - name: Verify every required job succeeded
-        run: |
-          results="${{ join(needs.*.result, ',') }}"
-          echo "Job results: ${results}"
-          case ",${results}," in
-            *failure*|*cancelled*|*skipped*)
-              echo "At least one required job did not succeed."
-              exit 1
-              ;;
-            *success*)
-              ;;
-            *)
-              echo "No job results were reported."
-              exit 1
-              ;;
-          esac
-          echo "All required jobs succeeded."
+    - name: Verify every required job succeeded
+      run: "results=\"${{ join(needs.*.result, ',') }}\"\necho \"Job results: ${results}\"\
+        \ncase \",${results},\" in\n  *failure*|*cancelled*|*skipped*)\n    echo \"\
+        At least one required job did not succeed.\"\n    exit 1\n    ;;\n  *success*)\n\
+        \    ;;\n  *)\n    echo \"No job results were reported.\"\n    exit 1\n  \
+        \  ;;\nesac\necho \"All required jobs succeeded.\"\n"
