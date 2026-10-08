@@ -30,7 +30,7 @@ const RELAYER_READY = RELAYER_ADDRESS.length > 0;
 function formatXlm(raw: string): string {
   const value = Number(raw);
   return Number.isFinite(value)
-    ? value.toLocaleString("en-US", { maximumFractionDigits: 4 })
+    ? value.toLocaleString("en-US", { maximumFractionDigits: 7 })
     : "0";
 }
 
