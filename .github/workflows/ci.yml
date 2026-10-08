@@ -36,6 +36,13 @@ jobs:
     - name: Run Biome lint
       working-directory: frontend
       run: pnpm lint
+    - name: Check for forbidden console.log in src/
+      run: "ALLOWLIST=\"frontend/src/app/api/rpc/route.ts\"\necho \"Checking frontend/src\
+        \ for console.log calls (allowlisted: $ALLOWLIST)...\"\nMATCHES=$(grep -rnE\
+        \ \"console\\.log\\s*\\(\" frontend/src | grep -v \"^${ALLOWLIST}:\" || true)\n\
+        if [ -n \"$MATCHES\" ]; then\n  echo \"::error::Found forbidden console.log\
+        \ statements in frontend/src:\"\n  echo \"$MATCHES\"\n  exit 1\nfi\necho \"\
+        Clean: No forbidden console.log found.\"\n"
   build:
     name: Build
     runs-on: ubuntu-latest

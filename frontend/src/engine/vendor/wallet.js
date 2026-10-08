@@ -238,16 +238,7 @@ export async function signWalletMessage(message, opts = {}) {
     await ensureFreighterReady();
   }
 
-  console.log(
-    "[Wallet] Requesting message signature for:",
-    message.substring(0, 30) + "...",
-  );
   const result = await signMessage(message, freighterOpts);
-  console.log("[Wallet] signMessage result:", {
-    hasSignedMessage: !!result?.signedMessage,
-    hasError: !!result?.error,
-    error: result?.error,
-  });
 
   const { signedMessage, signerAddress, error } = result || {};
   if (error) {
