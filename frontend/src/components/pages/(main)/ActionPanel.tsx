@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -10,6 +9,8 @@ import {
   TbShieldLock,
   TbX,
 } from "react-icons/tb";
+import { useEffect, useState } from "react";
+import { TbExternalLink, TbShieldLock } from "react-icons/tb";
 import {
   depositWithAutoRegister,
   getShieldedBalance,
@@ -49,28 +50,12 @@ function trimBalance(raw: string): string {
   return cleanFrac ? `${cleanWhole}.${cleanFrac}` : cleanWhole;
 }
 
-const TOKENS = [
-  {
-    symbol: "XLM",
-    name: "Stellar Lumens",
-    logo: "/Assets/Images/Logo-Coin/stellar-logo.svg",
-    imgClass: "dark:invert",
-  },
-  {
-    symbol: "USDC",
-    name: "USD Coin",
-    logo: "/Assets/Images/Logo-Coin/usdc-logo.svg",
-    imgClass: "",
-  },
-] as const;
+const XLM_LOGO = "/Assets/Images/Logo-Coin/stellar-logo.svg";
 
 export function ActionPanel() {
   const { active } = useActionTab();
   const [amount, setAmount] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [assetIndex, setAssetIndex] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -81,15 +66,6 @@ export function ActionPanel() {
   const wallet = useWalletContext();
   const refreshAbortRef = useRef<AbortController | null>(null);
 
-  const asset = TOKENS[assetIndex];
-  const filteredTokens = TOKENS.filter((token) => {
-    const q = query.trim().toLowerCase();
-    return (
-      !q ||
-      token.symbol.toLowerCase().includes(q) ||
-      token.name.toLowerCase().includes(q)
-    );
-  });
   const connected = Boolean(wallet.address);
   const balance = wallet.balance ?? "0.00";
   const tab = TABS.find((item) => item.id === active) ?? TABS[0];
@@ -213,11 +189,7 @@ export function ActionPanel() {
             onChange={(event) => setAmount(event.target.value)}
             className="w-full bg-transparent text-5xl font-medium tracking-tight text-fg outline-none placeholder:text-faint"
           />
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-line bg-fill-2 py-1.5 pl-1.5 pr-3 text-[15px] font-bold text-fg transition-colors hover:bg-fill-3"
-          >
+          <span className="flex shrink-0 items-center gap-2 rounded-full border border-line bg-fill-2 py-1.5 pl-1.5 pr-3 text-[15px] font-bold text-fg">
             <Image
               src={asset.logo}
               alt=""
@@ -228,10 +200,14 @@ export function ActionPanel() {
               decoding="async"
               className={`h-7 w-7 object-contain ${asset.imgClass}`}
               unoptimized
+              src={XLM_LOGO}
+              alt="XLM"
+              width={28}
+              height={28}
+              className="h-7 w-7 object-contain dark:invert"
             />
-            {asset.symbol}
-            <TbChevronDown className="h-4 w-4 text-muted" />
-          </button>
+            XLM
+          </span>
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3 text-sm text-muted">
