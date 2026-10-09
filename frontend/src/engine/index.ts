@@ -12,7 +12,9 @@ const XLM_DECIMALS = 7;
 
 export function xlmToStroops(amount: string): bigint {
   const trimmed = amount.trim();
-  if (!trimmed || Number.isNaN(Number(trimmed))) {
+  // Strict decimal form only: rejects "", "abc", scientific notation ("1e3"),
+  // and malformed multi-dot input before BigInt can throw an opaque error.
+  if (!/^\d+(\.\d*)?$/.test(trimmed)) {
     throw new Error("Enter a valid amount");
   }
   const [whole, frac = ""] = trimmed.split(".");
