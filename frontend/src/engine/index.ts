@@ -16,7 +16,8 @@ export function xlmToStroops(amount: string): bigint {
     throw new Error("Enter a valid amount");
   }
   const [whole, frac = ""] = trimmed.split(".");
-  const padded = `${frac}${"0".repeat(XLM_DECIMALS)}`.slice(0, XLM_DECIMALS);
+  if (frac.length > XLM_DECIMALS) throw new Error("Enter a valid amount");
+  const padded = frac.padEnd(XLM_DECIMALS, "0");
   const stroops =
     BigInt(whole || "0") * 10n ** BigInt(XLM_DECIMALS) + BigInt(padded || "0");
   if (stroops <= 0n) throw new Error("Amount must be greater than zero");
