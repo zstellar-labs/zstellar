@@ -91,7 +91,7 @@ jobs:
     - name: Install dependencies
       working-directory: frontend
       run: pnpm install --frozen-lockfile
-    - name: Run unit tests
+    - name: Run Vitest suite
       working-directory: frontend
       run: pnpm test
   secret-scan:
@@ -133,7 +133,7 @@ jobs:
     - name: Run gitleaks
       uses: gitleaks/gitleaks-action@v2
       env:
-        GITLEAKS_ENABLE_SUMMARY: "true"
+        GITLEAKS_ENABLE_SUMMARY: 'true'
   docs-drift:
     name: docs-drift
     runs-on: ubuntu-latest
