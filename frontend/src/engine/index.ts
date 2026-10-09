@@ -46,19 +46,34 @@ export function stroopsToXlm(stroops: bigint): string {
   return `${negative ? "-" : ""}${whole}.${frac}`;
 }
 
+/** Thrown when the shielded balance cannot be read (RPC/OPFS failure or a
+ * malformed notes response). Callers must surface the error rather than
+ * display the result as a zero balance. */
+export class ShieldedBalanceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ShieldedBalanceError";
+  }
+}
+
 export async function getShieldedBalance(address: string): Promise<bigint> {
   await initEngine();
+  let notes: unknown;
   try {
-    const notes = await getHandle().webClient.getUserNotes(address, 1000);
-    if (!Array.isArray(notes)) return 0n;
-    let total = 0n;
-    for (const note of notes as NoteRow[]) {
-      if (!note?.spent) total += noteToStroops(note.amount);
-    }
-    return total;
-  } catch {
-    return 0n;
+    notes = await getHandle().webClient.getUserNotes(address, 1000);
+  } catch (error) {
+    throw new ShieldedBalanceError(
+      error instanceof Error ? error.message : "Could not load shielded balance",
+    );
   }
+  if (!Array.isArray(notes)) {
+    throw new ShieldedBalanceError("Malformed notes response from the pool RPC");
+  }
+  let total = 0n;
+  for (const note of notes as NoteRow[]) {
+    if (!note?.spent) total += noteToStroops(note.amount);
+  }
+  return total;
 }
 
 function makeSubmitFn(address: string, onStatus?: OnStatus): SubmitFn {
