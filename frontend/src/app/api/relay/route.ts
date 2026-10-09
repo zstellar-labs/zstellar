@@ -10,6 +10,7 @@ import {
   patchAuthEntries,
 } from "@/engine/vendor/auth-entries";
 import { STELLAR } from "@/lib/stellar/config";
+import { CONTRACTS, STELLAR } from "@/lib/stellar/config";
 
 // The relayer secret lives only on the server. This route signs the
 // `sender.require_auth()` entry and the transaction envelope with the relayer
@@ -33,6 +34,53 @@ type RelayBody = {
   authEntries?: string[];
   latestLedger?: number;
 };
+
+function entryNeedsRelayer(
+  entry: xdr.SorobanAuthorizationEntry,
+  address: string,
+): boolean {
+  const creds = entry.credentials();
+  if (
+    creds.switch() !== xdr.SorobanCredentialsType.sorobanCredentialsAddress()
+  ) {
+    return false;
+  }
+  const addrAuth = creds.address();
+  if (addrAuth.signature().switch().name !== "scvVoid") return false;
+  return Address.fromScAddress(addrAuth.address()).toString() === address;
+}
+
+function patchAuthEntries(txXdr: string, signedAuthEntries: string[]): string {
+  const env = xdr.TransactionEnvelope.fromXDR(txXdr, "base64");
+  const v1 = env.v1();
+  if (!v1) throw new Error("Unsupported transaction envelope (expected v1)");
+  const auth = signedAuthEntries.map((e) =>
+    xdr.SorobanAuthorizationEntry.fromXDR(e, "base64"),
+  );
+  for (const op of v1.tx().operations()) {
+    const invoke = op.body()?.invokeHostFunctionOp?.();
+    if (!invoke) continue;
+    invoke.auth(auth);
+    return env.toXDR("base64");
+  }
+  throw new Error("No invokeHostFunction operation found to attach auth");
+}
+
+function isPoolTransactCall(op: xdr.Operation): boolean {
+  const invoke = op.body().invokeHostFunctionOp?.();
+  if (!invoke) return false;
+  const hostFn = invoke.hostFunction();
+  if (
+    hostFn.switch() !== xdr.HostFunctionType.hostFunctionTypeInvokeContract()
+  ) {
+    return false;
+  }
+  const call = hostFn.invokeContract();
+  if (call.functionName().toString() !== "transact") return false;
+  return (
+    Address.fromScAddress(call.contractAddress()).toString() === CONTRACTS.pool
+  );
+}
 
 export async function POST(request: Request): Promise<Response> {
   const secret = process.env.RELAYER_SECRET;
@@ -66,6 +114,22 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (!Array.isArray(authEntries)) {
     return Response.json({ error: "Invalid authEntries" }, { status: 400 });
+  }
+
+  // The relayer only pays for pool `transact` calls: every operation in the
+  // submitted envelope must be an invoke of CONTRACTS.pool::transact.
+  let relayOps: xdr.Operation[];
+  try {
+    const env = xdr.TransactionEnvelope.fromXDR(txXdr, "base64");
+    relayOps = env.v1()?.tx().operations() ?? [];
+  } catch {
+    return Response.json({ error: "Invalid txXdr envelope" }, { status: 400 });
+  }
+  if (!relayOps.length || !relayOps.every(isPoolTransactCall)) {
+    return Response.json(
+      { error: "Transaction must call transact on the pool contract" },
+      { status: 400 },
+    );
   }
 
   const networkPassphrase = STELLAR.networkPassphrase;
