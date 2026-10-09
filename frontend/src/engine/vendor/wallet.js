@@ -52,6 +52,92 @@ async function ensureFreighterReady() {
     }
   }
 
+  if (requestAddress) {
+    const access = await requestAccess();
+    if (access?.error) {
+      throw normalizeWalletError(
+        access.error,
+        "Freighter access request failed",
+      );
+    }
+    if (!access?.address) {
+      throw new Error("No public key returned");
+    }
+    return access.address;
+  }
+}
+
+/**
+ * Request wallet access and return the active public key.
+ *
+ * Validates Freighter availability, prompts for access if needed,
+ * and returns the connected Stellar address.
+ *
+ * @returns {Promise<string>} - Connected Stellar public key (G...).
+ */
+export async function connectWallet() {
+  return await ensureFreighterReady({ requestAddress: true });
+}
+
+/**
+ * Fetch the currently active public key from Freighter without prompting.
+ * @returns {Promise<string>}
+ */
+export async function getWalletAddress() {
+  await ensureFreighterReady();
+  const res = await getAddress();
+  if (res?.error) {
+    throw normalizeWalletError(
+      res.error,
+      "Failed to get active Freighter address",
+    );
+  }
+  if (!res?.address) {
+    throw new Error("No public key returned");
+  }
+  return res.address;
+}
+
+/**
+ * Watch Freighter for wallet address/network changes.
+ * @param {{intervalMs?: number, onChange: function}} opts
+ * @returns {function} stop watcher
+ */
+export function startWalletWatcher(opts) {
+  const { intervalMs = 3000, onChange } = opts || {};
+  const watcher = new WatchWalletChanges(intervalMs);
+  const res = watcher.watch((info) => {
+    try {
+      onChange?.(info);
+    } catch {
+      // Swallowed deliberately: wallet modules must not write key-derivation
+      // context or error objects to the console (privacy surface).
+    }
+  });
+  if (res?.error) {
+    throw normalizeWalletError(res.error, "Failed to start wallet watcher");
+  }
+  return () => watcher.stop();
+}
+
+/**
+ * Fetch current network details from Freighter.
+ *
+ * Useful for displaying network name and ensuring app/network alignment.
+ *
+ * @returns {Promise<{network: string, networkUrl: string, networkPassphrase: string, sorobanRpcUrl?: string}>}
+ */
+export async function getWalletNetwork() {
+  const details = await getNetworkDetails();
+  if (details?.error) {
+    throw normalizeWalletError(
+      details.error,
+      "Failed to get Freighter network details",
+    );
+  }
+
+  const { network, networkUrl, networkPassphrase, sorobanRpcUrl } = details;
+  return { network, networkUrl, networkPassphrase, sorobanRpcUrl };
 }
 
 /**
