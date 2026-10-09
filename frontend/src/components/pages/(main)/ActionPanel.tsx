@@ -20,6 +20,7 @@ import {
 } from "@/engine";
 import { useWalletContext } from "@/features/wallet";
 import { pollUntilChanged } from "@/lib/pollUntilChanged";
+import { parseShieldedRecipient, shouldRelayAction } from "./action-routing";
 import { TxModal, type TxPhase } from "./TxModal";
 import { ActionTabs, TABS, useActionTab } from "./tabs";
 
@@ -145,7 +146,7 @@ export function ActionPanel() {
     setStatus("Preparing...");
     setPhase("running");
     try {
-      const relayed = active !== "deposit" && RELAYER_READY;
+      const relayed = shouldRelayAction(active, RELAYER_READY);
 
       let hashes: string[] | null = null;
       if (active === "deposit") {
@@ -155,17 +156,12 @@ export function ActionPanel() {
           onStatus,
         );
       } else if (active === "transfer") {
-        const [noteKey, encKey] = recipient.split(":");
-        if (!noteKey || !encKey) {
-          throw new Error(
-            "Enter the recipient's shielded address (copy it from their Receive button).",
-          );
-        }
+        const { noteKey, encKey } = parseShieldedRecipient(recipient);
         hashes = await transfer(
           wallet.address,
           amount,
-          noteKey.trim(),
-          encKey.trim(),
+          noteKey,
+          encKey,
           onStatus,
           relayed,
         );
