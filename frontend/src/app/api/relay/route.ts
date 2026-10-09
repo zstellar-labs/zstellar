@@ -35,7 +35,7 @@ type RelayBody = {
   latestLedger?: number;
 };
 
-function entryNeedsRelayer(
+export function entryNeedsRelayer(
   entry: xdr.SorobanAuthorizationEntry,
   address: string,
 ): boolean {
@@ -50,7 +50,7 @@ function entryNeedsRelayer(
   return Address.fromScAddress(addrAuth.address()).toString() === address;
 }
 
-function patchAuthEntries(txXdr: string, signedAuthEntries: string[]): string {
+export function patchAuthEntries(txXdr: string, signedAuthEntries: string[]): string {
   const env = xdr.TransactionEnvelope.fromXDR(txXdr, "base64");
   const v1 = env.v1();
   if (!v1) throw new Error("Unsupported transaction envelope (expected v1)");
