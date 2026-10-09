@@ -28,7 +28,7 @@ const INITIAL: WalletState = {
 // Freighter v6 returns errors as objects ({ message, code }), not strings, so
 // passing one straight into new Error() yields "[object Object]". Normalize any
 // unknown error (Error, string, or { message }) to a readable string.
-function errorMessage(err: unknown, fallback: string): string {
+export function errorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
   if (err && typeof err === "object" && "message" in err) {
