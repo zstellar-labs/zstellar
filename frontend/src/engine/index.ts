@@ -144,7 +144,9 @@ export async function shield(
   address: string,
   amount: string,
   onStatus?: OnStatus,
+  signal?: AbortSignal,
 ): Promise<string[]> {
+  signal?.throwIfAborted();
   const stroops = xlmToStroops(amount);
   const client = await ready(address, onStatus);
   return client.executeDeposit(
@@ -198,9 +200,29 @@ function markAspRegistered(address: string): void {
   }
 }
 
+
+function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    const t = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(t);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 async function ensureAspRegistered(
   address: string,
   onStatus?: OnStatus,
+  signal?: AbortSignal,
 ): Promise<void> {
   if (isAspRegistered(address)) return;
   onStatus?.({
@@ -214,26 +236,35 @@ async function ensureAspRegistered(
     stage: "register",
     message: "Registered. Syncing with the chain, then proving...",
   });
-  await new Promise((resolve) => setTimeout(resolve, 6000));
+  await abortableSleep(6000, signal);
 }
+
+// Retry budget for post-registration sync: the ASP membership typically lands
+// within a couple of ledgers (~10s); 8 retries x 4s keeps the worst case under
+// ~40s including the one-time 6s registration wait.
+const SYNC_MAX_ATTEMPTS = 8;
+const SYNC_RETRY_DELAY_MS = 4000;
 
 export async function depositWithAutoRegister(
   address: string,
   amount: string,
   onStatus?: OnStatus,
+  signal?: AbortSignal,
 ): Promise<string[]> {
-  await ensureAspRegistered(address, onStatus);
+  await ensureAspRegistered(address, onStatus, signal);
 
-  let hashes = await shield(address, amount, onStatus);
+  signal?.throwIfAborted();
+  let hashes = await shield(address, amount, onStatus, signal);
   if (Array.isArray(hashes) && hashes.length > 0) return hashes;
 
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < SYNC_MAX_ATTEMPTS; i++) {
     onStatus?.({
       stage: "sync",
       message: `Waiting for ASP membership to sync from the chain (${i + 1})...`,
     });
-    await new Promise((resolve) => setTimeout(resolve, 4000));
-    hashes = await shield(address, amount, onStatus);
+    await abortableSleep(SYNC_RETRY_DELAY_MS, signal);
+    signal?.throwIfAborted();
+    hashes = await shield(address, amount, onStatus, signal);
     if (Array.isArray(hashes) && hashes.length > 0) return hashes;
   }
   return hashes;
