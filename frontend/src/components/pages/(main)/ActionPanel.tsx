@@ -65,6 +65,15 @@ export function ActionPanel() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const wallet = useWalletContext();
   const refreshAbortRef = useRef<AbortController | null>(null);
+  const actionAbort = useRef<AbortController | null>(null);
+
+  // Abort any in-flight deposit retry loop when the panel unmounts.
+  useEffect(
+    () => () => {
+      actionAbort.current?.abort();
+    },
+    [],
+  );
 
   const connected = Boolean(wallet.address);
   const balance = wallet.balance ?? "0.00";
@@ -126,10 +135,12 @@ export function ActionPanel() {
 
       let hashes: string[] | null = null;
       if (active === "deposit") {
+        actionAbort.current = new AbortController();
         hashes = await depositWithAutoRegister(
           wallet.address,
           amount,
           onStatus,
+          actionAbort.current.signal,
         );
       } else if (active === "transfer") {
         const { noteKey, encKey } = parseShieldedRecipient(recipient);
