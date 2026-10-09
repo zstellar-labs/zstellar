@@ -61,6 +61,29 @@ async function signPreparedAuthEntry(
   return signed.toXDR("base64");
 }
 
+function patchAuthEntries(txXdr, signedAuthEntries) {
+  const env = xdr.TransactionEnvelope.fromXDR(txXdr, "base64");
+  const v1 = env.v1();
+  if (!v1) {
+    throw new Error("Unsupported transaction envelope (expected v1)");
+  }
+
+  const auth = signedAuthEntries.map((e) =>
+    xdr.SorobanAuthorizationEntry.fromXDR(e, "base64"),
+  );
+  const invokes = v1
+    .tx()
+    .operations()
+    .filter((op) => op.body()?.invokeHostFunctionOp?.() != null);
+  if (invokes.length !== 1) {
+    throw new Error(
+      `Expected exactly one invokeHostFunction operation, found ${invokes.length}`,
+    );
+  }
+  invokes[0].body().invokeHostFunctionOp().auth(auth);
+  return env.toXDR("base64");
+}
+
 /**
  * @param {{txXdr: string, authEntries: string[], latestLedger?: number}} prepared
  * @param {{address: string, rpcUrl: string, networkPassphrase: string}} ctx
