@@ -61,7 +61,7 @@ async function signPreparedAuthEntry(
   return signed.toXDR("base64");
 }
 
-function patchAuthEntries(txXdr, signedAuthEntries) {
+export function patchAuthEntries(txXdr, signedAuthEntries) {
   const env = xdr.TransactionEnvelope.fromXDR(txXdr, "base64");
   const v1 = env.v1();
   if (!v1) {
